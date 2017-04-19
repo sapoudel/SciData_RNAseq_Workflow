@@ -7,3 +7,8 @@ What you need:
 1. [Samtools](http://www.htslib.org/)
 1. FASTA and GFF/Genbank file for your organism
 1. [Jupyter](http://jupyter.org/install.html) with [R kernel](https://irkernel.github.io/)
+
+Pipeline:
+1. Align reads (align_reads.ipynb)
+2. Count reads (count_reads.ipynb)
+3. Analysis (analysis.ipynb)
