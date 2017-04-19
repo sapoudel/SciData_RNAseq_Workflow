@@ -140,3 +140,75 @@ def align_reads(name,R1,R2,bt_index,out_dir,aligner='bowtie',cores=1,
 
     ### Add BAM file and alignment value to replicate ###
 	return sorted_bam,score
+
+def build_index(sequence,bt_index,aligner='bowtie'):
+
+	# Check that sequence exists
+	if not os.path.isfile(sequence):
+		raise ValueError('File does not exist: %s'%sequence)
+
+	if aligner == 'bowtie':
+		cmd = ['bowtie-build','-f',sequence,bt_index]
+	elif aligner == 'bowtie2':
+		cmd = ['bowtie2-build','-f',sequence,bt_index]
+	else:
+		raise ValueError('Aligner must be "bowtie" or "bowtie2"')
+
+	subprocess.call(cmd)
+
+	return
+
+def gb2gff(sequence,genbank):
+
+	from BCBio import GFF
+	from Bio import SeqIO
+	import pandas as pd
+	import csv
+
+	# Check that files exist
+	if not os.path.isfile(sequence):
+		raise ValueError('File does not exist: %s'%sequence)
+	if not os.path.isfile(genbank):
+		raise ValueError('File does not exist: %s'%genbank)
+
+	out_dir = os.path.split(genbank)[0]
+
+	tmp_gff = os.path.join(out_dir,'tmp.gff')
+	out_file = os.path.splitext(genbank)[0]+'.gff'
+
+	with open(genbank,'r') as gb_handle:
+		with open(tmp_gff, "w") as raw_handle:
+			GFF.write(SeqIO.parse(gb_handle, "genbank"), raw_handle)
+        
+	with open(sequence,'r') as f:
+		header = f.readline()
+
+	seqname = header[1:re.search('\s',header).start()]
+    
+	lines = []
+
+	raw_handle = open(tmp_gff,'r')
+	for rec in GFF.parse(raw_handle,limit_info={'gff_type':['CDS']}):
+		for feature in rec.features:
+			locus_tag = feature.qualifiers['locus_tag'][0]
+			gene = feature.qualifiers['gene'][0]
+			start = feature.location.start.position
+			end = feature.location.end.position
+			if feature.location.strand == 1:
+				strand = '+'
+			else:
+				strand = '-'
+	            
+			attr = 'gene_id "%s"; transcript_id "%s"; gene_name "%s";'%(locus_tag,locus_tag,gene)
+			lines.append([seqname,'feature','exon',start,end,
+						  '.',strand,'.',attr])
+	raw_handle.close()
+	DF_gff = pd.DataFrame(lines).sort_values(by=3,ascending=1)
+	
+	DF_gff.to_csv(out_file,sep='\t',quoting=csv.QUOTE_NONE,
+				  index=False,header=False)
+
+	os.remove(tmp_gff)
+	return
+
+	
