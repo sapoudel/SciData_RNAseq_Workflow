@@ -12,3 +12,5 @@ Pipeline:
 1. Align reads (align_reads.ipynb)
 2. Count reads (count_reads.ipynb)
 3. Analysis (analysis.ipynb)
+
+Note: If installing Bowtie on Mac, you may need to install [brew](https://brew.sh/) and run `brew install tbb`
