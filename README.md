@@ -5,6 +5,7 @@ What you need:
 1. [FastQC](http://www.bioinformatics.babraham.ac.uk/projects/fastqc/)
 1. [Bowtie](http://bowtie-bio.sourceforge.net/index.shtml) or [Bowtie2](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml)
 1. [Samtools](http://www.htslib.org/)
+1. [HTSeq-count](http://www-huber.embl.de/HTSeq/doc/install.html#install) (if using count_reads_python)
 1. FASTA and GFF/Genbank file for your organism
 1. [Jupyter](http://jupyter.org/install.html) with [R kernel](https://irkernel.github.io/)
 
