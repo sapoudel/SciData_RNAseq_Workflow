@@ -173,12 +173,7 @@ def gb2gff(sequence,genbank):
 
 	out_dir = os.path.split(genbank)[0]
 
-	tmp_gff = os.path.join(out_dir,'tmp.gff')
 	out_file = os.path.splitext(genbank)[0]+'.gff'
-
-	with open(genbank,'r') as gb_handle:
-		with open(tmp_gff, "w") as raw_handle:
-			GFF.write(SeqIO.parse(gb_handle, "genbank"), raw_handle)
         
 	with open(sequence,'r') as f:
 		header = f.readline()
@@ -187,28 +182,34 @@ def gb2gff(sequence,genbank):
     
 	lines = []
 
-	raw_handle = open(tmp_gff,'r')
-	for rec in GFF.parse(raw_handle,limit_info={'gff_type':['CDS']}):
-		for feature in rec.features:
-			locus_tag = feature.qualifiers['locus_tag'][0]
-			gene = feature.qualifiers['gene'][0]
-			start = feature.location.start.position
-			end = feature.location.end.position
-			if feature.location.strand == 1:
-				strand = '+'
-			else:
-				strand = '-'
-	            
-			attr = 'gene_id "%s"; transcript_id "%s"; gene_name "%s";'%(locus_tag,locus_tag,gene)
-			lines.append([seqname,'feature','exon',start,end,
-						  '.',strand,'.',attr])
-	raw_handle.close()
+	# Open genbank file
+	with open(genbank,'r') as gb_handle:
+		# Open record in genbank file
+		for rec in SeqIO.parse(gb_handle, "genbank"):
+			# Parse through each feature in genbank record
+			for feature in rec.features:
+				# Only grab info if feature is a CDS and not a pseudogene
+				if feature.type == 'CDS' and 'pseudo' not in feature.qualifiers.keys():    
+		
+					# Get gene info
+					locus_tag = feature.qualifiers['locus_tag'][0]
+					gene = feature.qualifiers['gene'][0]
+					start = feature.location.start.position
+					end = feature.location.end.position
+					if feature.location.strand == 1:
+						strand = '+'
+					else:
+						strand = '-'
+
+					# Now append this line to the growing GFF list
+					attr = 'gene_id "%s"; transcript_id "%s"; gene_name "%s";'%(locus_tag,locus_tag,gene)
+					lines.append([seqname,'feature','exon',start,end,
+						  		  '.',strand,'.',attr])
+
 	DF_gff = pd.DataFrame(lines).sort_values(by=3,ascending=1)
 	
 	DF_gff.to_csv(out_file,sep='\t',quoting=csv.QUOTE_NONE,
 				  index=False,header=False)
-
-	os.remove(tmp_gff)
 	return
 
 	
