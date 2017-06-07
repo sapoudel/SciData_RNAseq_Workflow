@@ -189,7 +189,7 @@ def gb2gff(sequence,genbank):
 			# Parse through each feature in genbank record
 			for feature in rec.features:
 				# Only grab info if feature is a CDS and not a pseudogene
-				if feature.type == 'CDS' and 'pseudo' not in feature.qualifiers.keys():    
+				if feature.type == 'CDS':    
 		
 					# Get gene info
 					locus_tag = feature.qualifiers['locus_tag'][0]
