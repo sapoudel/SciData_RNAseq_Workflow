@@ -1,19 +1,19 @@
 import os,warnings,subprocess,gzip,shutil,re
 
 def gunzip(gz,out_dir):
-    basename = os.path.split(gz)[1][:-3]
-    result = os.path.join(out_dir,basename)
-    with gzip.open(gz,'rb') as f:
-        with open(result,'w') as f2:
-            f2.write(f.read())
-    return result
+	basename = os.path.split(gz)[1][:-3]
+	result = os.path.join(out_dir,basename)
+	with gzip.open(gz,'rb') as f:
+		with open(result,'w') as f2:
+			f2.write(f.read())
+	return result
 
 def get_alignment_score(out_dir,name):
-    filename = os.path.join(out_dir,name+'_bowtie_output.txt')
-    with open(filename,'r') as f:
-        result = f.readlines()[1]
-    match = re.search('\([\d\.]*%\)',result)
-    return float(result[match.start()+1:match.end()-2])
+	filename = os.path.join(out_dir,name+'_bowtie_output.txt')
+	with open(filename,'r') as f:
+		result = f.readlines()[1]
+	match = re.search('\([\d\.]*%\)',result)
+	return float(result[match.start()+1:match.end()-2])
 
 def align_reads(name,R1,R2,bt_index,out_dir,aligner='bowtie',cores=1,
 				insertsize=1000,force=False,verbose=False):
@@ -52,7 +52,7 @@ def align_reads(name,R1,R2,bt_index,out_dir,aligner='bowtie',cores=1,
 		warnings.warn('Creating output directory %s'%out_dir)
 		os.makedirs(out_dir)
 
-    # Quit if output file already exists
+	# Quit if output file already exists
 	if os.path.isfile(os.path.join(out_dir,name+'.bam')) and not force:
 		score = get_alignment_score(out_dir,name)
 		return os.path.join(out_dir,name+'.bam'),score
@@ -65,10 +65,10 @@ def align_reads(name,R1,R2,bt_index,out_dir,aligner='bowtie',cores=1,
 	if R1 == R2:
 		raise ValueError('R1 and R2 files are identical')
 	if not os.path.isfile(bt_index+'.1.ebwt') and \
-       not os.path.isfile(bt_index+'.1.bt2'):
+	   not os.path.isfile(bt_index+'.1.bt2'):
 		raise ValueError('Bowtie index does not exist: %s'%bt_index)
 
-    ### Unzip fastq files ###
+	### Unzip fastq files ###
 	tmp_dir = os.path.join(out_dir,'tmp')
 	os.makedirs(tmp_dir)
 
@@ -92,9 +92,9 @@ def align_reads(name,R1,R2,bt_index,out_dir,aligner='bowtie',cores=1,
 		else:
 			r2_files.append(fastq)
 
-    ### Run Bowtie Aligner ###
+	### Run Bowtie Aligner ###
 
-    
+	
 	bowtie_out = os.path.join(tmp_dir,name+'.sam')
 	bowtie_err = os.path.join(out_dir,name+'_bowtie_output.txt')
 
@@ -116,7 +116,7 @@ def align_reads(name,R1,R2,bt_index,out_dir,aligner='bowtie',cores=1,
 		with open(bowtie_err,'w') as err:
 			subprocess.call(cmd,stdout=out,stderr=err)
 
-    ### Post-process files ###
+	### Post-process files ###
 
 	unsorted_bam = os.path.join(tmp_dir,name+'.unsorted.bam')
 	sorted_bam = os.path.join(out_dir,name+'.bam')
@@ -130,15 +130,15 @@ def align_reads(name,R1,R2,bt_index,out_dir,aligner='bowtie',cores=1,
 		print 'Sorting BAM file: ' + ' '.join(samsort)
 	subprocess.call(samsort)
 
-    ### Clear all non-bam files ###
+	### Clear all non-bam files ###
 	if verbose:
 		print 'Cleaning up...'
 	shutil.rmtree(tmp_dir)
 
-    ### Find alignment score ###
+	### Find alignment score ###
 	score = get_alignment_score(out_dir,name)
 
-    ### Add BAM file and alignment value to replicate ###
+	### Add BAM file and alignment value to replicate ###
 	return sorted_bam,score
 
 def build_index(sequence,bt_index,aligner='bowtie'):
@@ -174,12 +174,12 @@ def gb2gff(sequence,genbank):
 	out_dir = os.path.split(genbank)[0]
 
 	out_file = os.path.splitext(genbank)[0]+'.gff'
-        
+		
 	with open(sequence,'r') as f:
 		header = f.readline()
 
 	seqname = header[1:re.search('\s',header).start()]
-    
+	
 	lines = []
 
 	# Open genbank file
@@ -188,23 +188,44 @@ def gb2gff(sequence,genbank):
 		for rec in SeqIO.parse(gb_handle, "genbank"):
 			# Parse through each feature in genbank record
 			for feature in rec.features:
-				# Only grab info if feature is a CDS and not a pseudogene
-				if feature.type == 'CDS':    
-		
-					# Get gene info
-					locus_tag = feature.qualifiers['locus_tag'][0]
-					gene = feature.qualifiers['gene'][0]
-					start = feature.location.start.position
-					end = feature.location.end.position
-					if feature.location.strand == 1:
-						strand = '+'
-					else:
-						strand = '-'
+				# Only grab info if feature is a CDS
+				if feature.type == 'CDS':
+					if len(feature.location.parts) == 1:
 
-					# Now append this line to the growing GFF list
-					attr = 'gene_id "%s"; transcript_id "%s"; gene_name "%s";'%(locus_tag,locus_tag,gene)
-					lines.append([seqname,'feature','exon',start,end,
-						  		  '.',strand,'.',attr])
+						# Get gene info
+						locus_tag = feature.qualifiers['locus_tag'][0]
+						gene = feature.qualifiers['gene'][0]
+						start = feature.location.start.position
+						end = feature.location.end.position
+						if feature.location.strand == 1:
+							strand = '+'
+						else:
+							strand = '-'
+
+						# Now append this line to the growing GFF list
+						attr = 'gene_id "%s"; transcript_id "%s"; gene_name "%s";'%(locus_tag,locus_tag,gene)
+						lines.append([seqname,'feature','exon',start,end,
+									  '.',strand,'.',attr])
+
+					# If gene is split between two parts
+					else:
+						i = 1
+						for part in feature.location.parts:
+							# Get gene info
+							locus_tag = feature.qualifiers['locus_tag'][0] + '_' + str(i)
+							gene = feature.qualifiers['gene'][0]
+							start = part.start.position
+							end = part.end.position
+							if part.strand == 1:
+								strand = '+'
+							else:
+								strand = '-'
+
+							# Now append this line to the growing GFF list
+							attr = 'gene_id "%s"; transcript_id "%s"; gene_name "%s";'%(locus_tag,locus_tag,gene)
+							lines.append([seqname,'feature','exon',start,end,
+										  '.',strand,'.',attr])
+							i+=1
 
 	DF_gff = pd.DataFrame(lines).sort_values(by=3,ascending=1)
 	
