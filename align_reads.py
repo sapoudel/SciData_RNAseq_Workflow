@@ -193,8 +193,11 @@ def gb2gff(sequence,genbank):
 					if len(feature.location.parts) == 1:
 
 						# Get gene info
-						locus_tag = feature.qualifiers['locus_tag'][0]
 						gene = feature.qualifiers['gene'][0]
+						try:
+							locus_tag = feature.qualifiers['locus_tag'][0]
+						except:
+							locus_tag = gene
 						start = feature.location.start.position
 						end = feature.location.end.position
 						if feature.location.strand == 1:
@@ -212,8 +215,11 @@ def gb2gff(sequence,genbank):
 						i = 1
 						for part in feature.location.parts:
 							# Get gene info
-							locus_tag = feature.qualifiers['locus_tag'][0] + '_' + str(i)
 							gene = feature.qualifiers['gene'][0]
+							try:
+								locus_tag = feature.qualifiers['locus_tag'][0] + '_' + str(i)
+							except:
+								locus_tag = gene + '_' + str(i)
 							start = part.start.position
 							end = part.end.position
 							if part.strand == 1:
