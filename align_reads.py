@@ -76,7 +76,7 @@ def align_reads(name,R1,R2,bt_index,out_dir,aligner='bowtie',cores=1,
 	r2_files = []
 	# In case the fastq files are split
 	for fastq in R1.split(','):
-		if fastq.endswith('.gz'):
+		if fastq.endswith('.gz') and aligner=='bowtie':
 			if verbose:
 				print 'Unzipping file: %s'%fastq
 			
@@ -85,7 +85,7 @@ def align_reads(name,R1,R2,bt_index,out_dir,aligner='bowtie',cores=1,
 			r1_files.append(fastq)
 
 	for fastq in R2.split(','):
-		if fastq.endswith('.gz'):
+		if fastq.endswith('.gz') and aligner=='bowtie':
 			if verbose:
 				print 'Unzipping file: %s'%fastq
 			r2_files.append(gunzip(fastq,tmp_dir))
