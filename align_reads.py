@@ -8,12 +8,19 @@ def gunzip(gz,out_dir):
 			f2.write(f.read())
 	return result
 
-def get_alignment_score(out_dir,name):
+def get_alignment_score(out_dir,name,aligner):
 	filename = os.path.join(out_dir,name+'_bowtie_output.txt')
 	with open(filename,'r') as f:
-		result = f.readlines()[1]
-	match = re.search('\([\d\.]*%\)',result)
-	return float(result[match.start()+1:match.end()-2])
+		if aligner == 'bowtie':
+			result = f.readlines()[1]
+		else:
+			result = f.readlines()[-1]
+	if aligner == 'bowtie':
+		match = re.search('\([\d\.]*%\)',result)
+		return float(result[match.start()+1:match.end()-2])
+	else:
+		match = re.search('[\d{2,3}.]*%',result)
+		return float(result[match.start():match.end()-1])
 
 def align_reads(name,R1,R2,bt_index,out_dir,aligner='bowtie',cores=1,
 				insertsize=1000,force=False,verbose=False):
@@ -54,7 +61,7 @@ def align_reads(name,R1,R2,bt_index,out_dir,aligner='bowtie',cores=1,
 
 	# Quit if output file already exists
 	if os.path.isfile(os.path.join(out_dir,name+'.bam')) and not force:
-		score = get_alignment_score(out_dir,name)
+		score = get_alignment_score(out_dir,name,aligner)
 		return os.path.join(out_dir,name+'.bam'),score
 
 	# Check that all files exist
@@ -136,7 +143,7 @@ def align_reads(name,R1,R2,bt_index,out_dir,aligner='bowtie',cores=1,
 	shutil.rmtree(tmp_dir)
 
 	### Find alignment score ###
-	score = get_alignment_score(out_dir,name)
+	score = get_alignment_score(out_dir,name,aligner)
 
 	### Add BAM file and alignment value to replicate ###
 	return sorted_bam,score
