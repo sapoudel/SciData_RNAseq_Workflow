@@ -77,7 +77,8 @@ def align_reads(name,R1,R2,bt_index,out_dir,aligner='bowtie',cores=1,
 
 	### Unzip fastq files ###
 	tmp_dir = os.path.join(out_dir,'tmp')
-	os.makedirs(tmp_dir)
+    if not os.path.isdir(tmp_dir):
+        os.makedirs(tmp_dir)
 
 	r1_files = []
 	r2_files = []
