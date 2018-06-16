@@ -1,5 +1,135 @@
 import os,warnings,subprocess,gzip,shutil,re
 
+def initialize_reference(org_id,fasta,gb,aligner):
+    
+    full_fasta = os.path.expanduser(fasta)
+    full_gb = os.path.expanduser(gb)
+    
+    # Check that fasta and gb_full exist
+    if not os.path.isfile(full_fasta):
+        raise ValueError('File does not exist: %s'%full_fasta)
+    if not os.path.isfile(full_gb):
+        raise ValueError('File does not exist: %s'%full_gb)
+    
+    # Initialize reference directory
+    org_dir = os.path.join(os.path.expanduser('~/ref/'),org_id)
+    if not os.path.isdir(org_dir):
+        os.makedirs(org_dir)
+        
+    # Copy fasta and genbank file to organism directory
+    new_fasta = os.path.join(org_dir,org_id+'.fasta')
+    new_gb = os.path.join(org_dir,org_id+'.gb')
+    shutil.copy(full_fasta,new_fasta)
+    shutil.copy(full_gb,new_gb)
+    
+    # Build Bowtie Index
+    build_index(new_fasta,os.path.join(org_dir,org_id),aligner=aligner)
+    
+    # Make GFF file
+    print('Making GFF file...')
+    gb2gff(new_fasta,new_gb)
+        
+    # Print verbose output
+    print('')
+    print('Created Directory: '+org_dir)
+    for f in sorted(os.listdir(org_dir)):
+        print('-> '+f)
+    
+    
+def build_index(sequence,bt_index,aligner='bowtie'):
+    # Check that aligner is properly installed
+    try:
+        subprocess.check_output([aligner,'--version'])
+    except:
+        raise ValueError('Aligner not installed correctly: '+aligner)
+    
+    # Check that sequence exists
+    if not os.path.isfile(sequence):
+        raise ValueError('File does not exist: %s'%sequence)
+
+    if aligner == 'bowtie':
+        print('Building bowtie index: bowtie-build -f '+sequence+' '+bt_index)
+        cmd = ['bowtie-build','-f',sequence,bt_index]
+    elif aligner == 'bowtie2':
+        print('Building bowtie index: bowtie2-build -f '+sequence+' '+bt_index)
+        cmd = ['bowtie2-build','-f',sequence,bt_index]
+    else:
+        raise ValueError('Aligner must be "bowtie" or "bowtie2"')
+
+    subprocess.call(cmd)
+
+    return
+        
+def gb2gff(sequence,genbank,id_tag='locus_tag'):
+
+    from Bio import SeqIO
+    import pandas as pd
+    import csv
+
+    # Check that files exist
+    if not os.path.isfile(sequence):
+        raise ValueError('File does not exist: %s'%sequence)
+    if not os.path.isfile(genbank):
+        raise ValueError('File does not exist: %s'%genbank)
+
+    out_dir = os.path.split(genbank)[0]
+
+    out_file = os.path.splitext(genbank)[0]+'.gff'
+        
+    with open(sequence,'r') as f:
+        header = f.readline()
+
+    seqname = header[1:re.search('\s',header).start()]
+    
+    lines = []
+
+    # Open genbank file
+    with open(genbank,'r') as gb_handle:
+        # Open record in genbank file
+        for rec in SeqIO.parse(gb_handle, "genbank"):
+            # Parse through each feature in genbank record
+            for feature in rec.features:
+                # Only grab info if feature is a CDS
+                if feature.type == 'CDS':
+                    if len(feature.location.parts) == 1:
+                        gene_id = feature.qualifiers[id_tag][0]
+                        start = feature.location.start.position
+                        end = feature.location.end.position
+                        if feature.location.strand == 1:
+                            strand = '+'
+                        else:
+                            strand = '-'
+
+                        # Now append this line to the growing GFF list
+                        attr = 'gene_id "%s"'%gene_id
+                        lines.append([seqname,'feature','exon',start,end,
+                                      '.',strand,'.',attr])
+
+                    # If gene is split between two parts
+                    else:
+                        i = 1
+                        for part in feature.location.parts:
+                            # Get gene info
+                            locus_tag = feature.qualifiers[id_tag][0] + '_' + str(i)
+                            start = part.start.position
+                            end = part.end.position
+                            if part.strand == 1:
+                                strand = '+'
+                            else:
+                                strand = '-'
+
+                            # Now append this line to the growing GFF list
+                            attr = 'gene_id "%s"'%gene_id
+                            lines.append([seqname,'feature','exon',start,end,
+                                          '.',strand,'.',attr])
+                            i+=1
+
+    DF_gff = pd.DataFrame(lines).sort_values(by=3,ascending=1)
+    
+    DF_gff.to_csv(out_file,sep='\t',quoting=csv.QUOTE_NONE,
+                  index=False,header=False)
+    return
+
 def gunzip(gz,out_dir):
     basename = os.path.split(gz)[1][:-3]
     result = os.path.join(out_dir,basename)
@@ -148,103 +278,3 @@ def align_reads(name,R1,R2,bt_index,out_dir,aligner='bowtie',cores=1,
 
     ### Add BAM file and alignment value to replicate ###
     return sorted_bam,score
-
-def build_index(sequence,bt_index,aligner='bowtie'):
-
-    # Check that sequence exists
-    if not os.path.isfile(sequence):
-        raise ValueError('File does not exist: %s'%sequence)
-
-    if aligner == 'bowtie':
-        cmd = ['bowtie-build','-f',sequence,bt_index]
-    elif aligner == 'bowtie2':
-        cmd = ['bowtie2-build','-f',sequence,bt_index]
-    else:
-        raise ValueError('Aligner must be "bowtie" or "bowtie2"')
-
-    subprocess.call(cmd)
-
-    return
-
-def gb2gff(sequence,genbank):
-
-    from BCBio import GFF
-    from Bio import SeqIO
-    import pandas as pd
-    import csv
-
-    # Check that files exist
-    if not os.path.isfile(sequence):
-        raise ValueError('File does not exist: %s'%sequence)
-    if not os.path.isfile(genbank):
-        raise ValueError('File does not exist: %s'%genbank)
-
-    out_dir = os.path.split(genbank)[0]
-
-    out_file = os.path.splitext(genbank)[0]+'.gff'
-        
-    with open(sequence,'r') as f:
-        header = f.readline()
-
-    seqname = header[1:re.search('\s',header).start()]
-    
-    lines = []
-
-    # Open genbank file
-    with open(genbank,'r') as gb_handle:
-        # Open record in genbank file
-        for rec in SeqIO.parse(gb_handle, "genbank"):
-            # Parse through each feature in genbank record
-            for feature in rec.features:
-                # Only grab info if feature is a CDS
-                if feature.type == 'CDS':
-                    if len(feature.location.parts) == 1:
-
-                        # Get gene info
-                        gene = feature.qualifiers['gene'][0]
-                        try:
-                            locus_tag = feature.qualifiers['locus_tag'][0]
-                        except:
-                            locus_tag = gene
-                        start = feature.location.start.position
-                        end = feature.location.end.position
-                        if feature.location.strand == 1:
-                            strand = '+'
-                        else:
-                            strand = '-'
-
-                        # Now append this line to the growing GFF list
-                        attr = 'gene_id "%s"; transcript_id "%s"; gene_name "%s";'%(locus_tag,locus_tag,gene)
-                        lines.append([seqname,'feature','exon',start,end,
-                                      '.',strand,'.',attr])
-
-                    # If gene is split between two parts
-                    else:
-                        i = 1
-                        for part in feature.location.parts:
-                            # Get gene info
-                            gene = feature.qualifiers['gene'][0]
-                            try:
-                                locus_tag = feature.qualifiers['locus_tag'][0] + '_' + str(i)
-                            except:
-                                locus_tag = gene + '_' + str(i)
-                            start = part.start.position
-                            end = part.end.position
-                            if part.strand == 1:
-                                strand = '+'
-                            else:
-                                strand = '-'
-
-                            # Now append this line to the growing GFF list
-                            attr = 'gene_id "%s"; transcript_id "%s"; gene_name "%s";'%(locus_tag,locus_tag,gene)
-                            lines.append([seqname,'feature','exon',start,end,
-                                          '.',strand,'.',attr])
-                            i+=1
-
-    DF_gff = pd.DataFrame(lines).sort_values(by=3,ascending=1)
-    
-    DF_gff.to_csv(out_file,sep='\t',quoting=csv.QUOTE_NONE,
-                  index=False,header=False)
-    return
-
-    
