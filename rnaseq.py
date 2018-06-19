@@ -1,5 +1,9 @@
 import os,warnings,subprocess,gzip,shutil,re
 
+##########################
+## Make Reference Files ##
+##########################
+
 def initialize_reference(org_id,fasta,gb,aligner):
     
     full_fasta = os.path.expanduser(fasta)
@@ -23,11 +27,16 @@ def initialize_reference(org_id,fasta,gb,aligner):
     shutil.copy(full_gb,new_gb)
     
     # Build Bowtie Index
-    build_index(new_fasta,os.path.join(org_dir,org_id),aligner=aligner)
+    bt_index = os.path.join(org_dir,org_id)
+    build_index(new_fasta,bt_index,aligner=aligner)
     
     # Make GFF file
     print('Making GFF file...')
-    gb2gff(new_fasta,new_gb)
+    gff = gb2gff(new_fasta,new_gb)
+    
+    # Add aligner info
+    with open(os.path.join(org_dir,'info.txt'),'w') as f:
+        f.write('\n'.join([aligner,bt_index,gff]))
         
     # Print verbose output
     print('')
@@ -76,10 +85,7 @@ def gb2gff(sequence,genbank,id_tag='locus_tag'):
 
     out_file = os.path.splitext(genbank)[0]+'.gff'
         
-    with open(sequence,'r') as f:
-        header = f.readline()
-
-    seqname = header[1:re.search('\s',header).start()]
+    fasta_ids = [record.id for record in SeqIO.parse(sequence,'fasta')]
     
     lines = []
 
@@ -87,6 +93,9 @@ def gb2gff(sequence,genbank,id_tag='locus_tag'):
     with open(genbank,'r') as gb_handle:
         # Open record in genbank file
         for rec in SeqIO.parse(gb_handle, "genbank"):
+            # Check that record is also in fasta
+            if rec.id not in fasta_ids:
+                raise ValueError('Fasta file is missing record: '+rec.id)
             # Parse through each feature in genbank record
             for feature in rec.features:
                 # Only grab info if feature is a CDS
@@ -102,7 +111,7 @@ def gb2gff(sequence,genbank,id_tag='locus_tag'):
 
                         # Now append this line to the growing GFF list
                         attr = 'gene_id "%s"'%gene_id
-                        lines.append([seqname,'feature','exon',start,end,
+                        lines.append([rec.id,'feature','exon',start,end,
                                       '.',strand,'.',attr])
 
                     # If gene is split between two parts
@@ -120,15 +129,34 @@ def gb2gff(sequence,genbank,id_tag='locus_tag'):
 
                             # Now append this line to the growing GFF list
                             attr = 'gene_id "%s"'%gene_id
-                            lines.append([seqname,'feature','exon',start,end,
+                            lines.append([rec.id,'feature','exon',start,end,
                                           '.',strand,'.',attr])
                             i+=1
 
-    DF_gff = pd.DataFrame(lines).sort_values(by=3,ascending=1)
+    DF_gff = pd.DataFrame(lines).sort_values(by=[0,3],ascending=[1,1])
     
     DF_gff.to_csv(out_file,sep='\t',quoting=csv.QUOTE_NONE,
                   index=False,header=False)
-    return
+    return out_file
+
+#################
+## Align Reads ##
+#################
+
+def mount_bucket(bucket):
+    
+    data_dir = os.path.join(os.path.expanduser('~'),bucket)
+    
+    # Create bucket folder
+    if not os.path.isdir(data_dir):
+        subprocess.call(['mkdir',data_dir])
+    
+    # Mount bucket
+    if not os.path.ismount(data_dir):
+        subprocess.call(['gcsfuse','--file-mode','777',
+                         '--dir-mode','777',bucket,data_dir])
+    
+    return data_dir
 
 def gunzip(gz,out_dir):
     basename = os.path.split(gz)[1][:-3]
@@ -144,6 +172,7 @@ def get_alignment_score(out_dir,name,aligner):
         if aligner == 'bowtie':
             result = f.readlines()[1]
         else:
+            print f.readlines()
             result = f.readlines()[-1]
     if aligner == 'bowtie':
         match = re.search('\([\d\.]*%\)',result)
@@ -152,7 +181,7 @@ def get_alignment_score(out_dir,name,aligner):
         match = re.search('[\d{2,3}.]*%',result)
         return float(result[match.start():match.end()-1])
 
-def align_reads(name,R1,R2,bt_index,out_dir,aligner='bowtie',cores=1,
+def align_reads(name,R1,R2,organism,in_dir,out_dir,cores=8,
                 insertsize=1000,force=False,verbose=False):
     '''
     Align RNAseq FASTQ files using bowtie or bowtie2 to a reference genome.
@@ -165,12 +194,12 @@ def align_reads(name,R1,R2,bt_index,out_dir,aligner='bowtie',cores=1,
         Absolute location of R1 fastq file
     R2: str
         Absolute location of R2 fastq file
-    bt_index: str
-        Location of bowtie index to use for alignment
+    organism: str
+        Organism ID for alignment 
+    in_dir: str
+        Directory with raw files (usually google bucket)
     out_dir: str
-        Output directory
-    aligner: 'bowtie' or 'bowtie2' (default 'bowtie')
-        Designate which aligner to use
+        Output directory  
     insertsize: int (default 1000)
         Maximum distance between paired ends
     cores: int (default 1)
@@ -185,50 +214,62 @@ def align_reads(name,R1,R2,bt_index,out_dir,aligner='bowtie',cores=1,
     if verbose:
         print 'Processing %s'%name
 
+    ### Set-up and quality check ###    
+    
     if not os.path.isdir(out_dir):
         warnings.warn('Creating output directory %s'%out_dir)
         os.makedirs(out_dir)
+    
+    # Split R1/R2 files if necessary and get filename
+    r1_files = [os.path.join(in_dir,f) for f in R1.split(',')]
+    r2_files = [os.path.join(in_dir,f) for f in R2.split(',')]
 
+    # Check that all files exist
+    for f in r1_files+r2_files:
+        if not os.path.isfile(f):
+            raise ValueError('File does not exist: %s'%f)
+    if R1 == R2:
+        raise ValueError('R1 and R2 files are identical')
+
+    # Check that organism directory exists
+    org_dir = os.path.join(os.path.expanduser('~'),'ref',organism)
+    if not os.path.isdir(org_dir):
+        raise ValueError('Reference not created for organism. See 0_setup_organism')
+        
+    # Get bowtie index and aligner
+    with open(os.path.join(org_dir,'info.txt'),'r') as f:
+        aligner,bt_index,gff = [line[:-1] for line in f.readlines()]
+        
     # Quit if output file already exists
     if os.path.isfile(os.path.join(out_dir,name+'.bam')) and not force:
         score = get_alignment_score(out_dir,name,aligner)
         return os.path.join(out_dir,name+'.bam'),score
 
-    # Check that all files exist
-    if not os.path.isfile(R1):
-        raise ValueError('File does not exist: %s'%R1)
-    if not os.path.isfile(R2):
-        raise ValueError('File does not exist: %s'%R2)
-    if R1 == R2:
-        raise ValueError('R1 and R2 files are identical')
-    if not os.path.isfile(bt_index+'.1.ebwt') and \
-       not os.path.isfile(bt_index+'.1.bt2'):
-        raise ValueError('Bowtie index does not exist: %s'%bt_index)
-
     ### Unzip fastq files ###
     tmp_dir = os.path.join(out_dir,'tmp')
     if not os.path.isdir(tmp_dir):
         os.makedirs(tmp_dir)
-
-    r1_files = []
-    r2_files = []
+    
+    final_r1 = []
+    final_r2 = []
     # In case the fastq files are split
-    for fastq in R1.split(','):
+    for fastq in r1_files:
         if fastq.endswith('.gz') and aligner=='bowtie':
             if verbose:
                 print 'Unzipping file: %s'%fastq
             
-            r1_files.append(gunzip(fastq,tmp_dir))
+            final_r1.append(gunzip(fastq,tmp_dir))
         else:
-            r1_files.append(fastq)
+            final_r1.append(fastq)
 
-    for fastq in R2.split(','):
+    
+    for fastq in r2_files:
         if fastq.endswith('.gz') and aligner=='bowtie':
             if verbose:
                 print 'Unzipping file: %s'%fastq
-            r2_files.append(gunzip(fastq,tmp_dir))
+            final_r2.append(gunzip(fastq,tmp_dir))
         else:
-            r2_files.append(fastq)
+            final_r2.append(fastq)
 
     ### Run Bowtie Aligner ###
 
@@ -238,10 +279,10 @@ def align_reads(name,R1,R2,bt_index,out_dir,aligner='bowtie',cores=1,
 
     if aligner == 'bowtie':
         cmd = [aligner,'-X',str(insertsize),'-n','2','-p',str(cores),'-3','3',
-               '-S','-1',','.join(r1_files),'-2',','.join(r2_files),bt_index]
+               '-S','-1',','.join(final_r1),'-2',','.join(final_r2),bt_index]
     elif aligner == 'bowtie2':
         cmd = [aligner,'-X',str(insertsize),'-N','1','-p',str(cores),'-3','3',
-               '-1',','.join(r1_files),'-2',','.join(r2_files),
+               '-1',','.join(final_r1),'-2',','.join(final_r2),
                '-x',bt_index]
     else:
         raise ValueError('Aligner must be "bowtie" or "bowtie2"')
@@ -259,7 +300,7 @@ def align_reads(name,R1,R2,bt_index,out_dir,aligner='bowtie',cores=1,
     unsorted_bam = os.path.join(tmp_dir,name+'.unsorted.bam')
     sorted_bam = os.path.join(out_dir,name+'.bam')
 
-    sam2bam = ['samtools','view','-bS',bowtie_out,'-o',unsorted_bam]
+    sam2bam = ['samtools','view','-b',bowtie_out,'-o',unsorted_bam]
     samsort = ['samtools','sort',unsorted_bam,'-o',sorted_bam]
     if verbose:
         print 'Converting to BAM: ' + ' '.join(sam2bam)
