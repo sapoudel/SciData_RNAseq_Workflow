@@ -110,7 +110,7 @@ def gb2gff(sequence,genbank,id_tag='locus_tag'):
                             strand = '-'
 
                         # Now append this line to the growing GFF list
-                        attr = 'gene_id "%s"'%gene_id
+                        attr = 'gene_id "%s"; transcript_id "%s"'%(gene_id,gene_id)
                         lines.append([rec.id,'feature','exon',start,end,
                                       '.',strand,'.',attr])
 
@@ -119,7 +119,7 @@ def gb2gff(sequence,genbank,id_tag='locus_tag'):
                         i = 1
                         for part in feature.location.parts:
                             # Get gene info
-                            locus_tag = feature.qualifiers[id_tag][0] + '_' + str(i)
+                            gene_id = feature.qualifiers[id_tag][0] + '_' + str(i)
                             start = part.start.position
                             end = part.end.position
                             if part.strand == 1:
@@ -128,7 +128,7 @@ def gb2gff(sequence,genbank,id_tag='locus_tag'):
                                 strand = '-'
 
                             # Now append this line to the growing GFF list
-                            attr = 'gene_id "%s"'%gene_id
+                            attr = 'gene_id "%s"; transcript_id "%s"'%(gene_id,gene_id)
                             lines.append([rec.id,'feature','exon',start,end,
                                           '.',strand,'.',attr])
                             i+=1
@@ -172,7 +172,6 @@ def get_alignment_score(out_dir,name,aligner):
         if aligner == 'bowtie':
             result = f.readlines()[1]
         else:
-            print f.readlines()
             result = f.readlines()[-1]
     if aligner == 'bowtie':
         match = re.search('\([\d\.]*%\)',result)
@@ -221,8 +220,8 @@ def align_reads(name,R1,R2,organism,in_dir,out_dir,cores=8,
         os.makedirs(out_dir)
     
     # Split R1/R2 files if necessary and get filename
-    r1_files = [os.path.join(in_dir,f) for f in R1.split(',')]
-    r2_files = [os.path.join(in_dir,f) for f in R2.split(',')]
+    r1_files = [os.path.join(in_dir,f) for f in R1.split(';')]
+    r2_files = [os.path.join(in_dir,f) for f in R2.split(';')]
 
     # Check that all files exist
     for f in r1_files+r2_files:
@@ -300,8 +299,8 @@ def align_reads(name,R1,R2,organism,in_dir,out_dir,cores=8,
     unsorted_bam = os.path.join(tmp_dir,name+'.unsorted.bam')
     sorted_bam = os.path.join(out_dir,name+'.bam')
 
-    sam2bam = ['samtools','view','-b',bowtie_out,'-o',unsorted_bam]
-    samsort = ['samtools','sort',unsorted_bam,'-o',sorted_bam]
+    sam2bam = ['samtools','view','-b',bowtie_out,'-@',str(cores),'-o',unsorted_bam]
+    samsort = ['samtools','sort',unsorted_bam,'-@',str(cores),'-o',sorted_bam]
     if verbose:
         print 'Converting to BAM: ' + ' '.join(sam2bam)
     subprocess.call(sam2bam)
