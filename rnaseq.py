@@ -1,4 +1,4 @@
-import os,warnings,subprocess,gzip,shutil,re
+import os,subprocess,gzip,shutil,re
 
 ##########################
 ## Make Reference Files ##
@@ -161,9 +161,7 @@ def mount_bucket(bucket):
 def gunzip(gz,out_dir):
     basename = os.path.split(gz)[1][:-3]
     result = os.path.join(out_dir,basename)
-    with gzip.open(gz,'rb') as f:
-        with open(result,'w') as f2:
-            f2.write(f.read())
+    subprocess.call('gunzip < '+gz+' > '+result,shell=True)
     return result
 
 def get_alignment_score(out_dir,name,aligner):
@@ -216,7 +214,8 @@ def align_reads(name,R1,R2,organism,in_dir,out_dir,cores=8,
     ### Set-up and quality check ###    
     
     if not os.path.isdir(out_dir):
-        warnings.warn('Creating output directory %s'%out_dir)
+        if verbose:
+            print('Creating output directory %s'%out_dir)
         os.makedirs(out_dir)
     
     # Split R1/R2 files if necessary and get filename
@@ -231,7 +230,7 @@ def align_reads(name,R1,R2,organism,in_dir,out_dir,cores=8,
         raise ValueError('R1 and R2 files are identical')
 
     # Check that organism directory exists
-    org_dir = os.path.join(os.path.expanduser('~'),'ref','processed_data',organism)
+    org_dir = os.path.join(os.path.expanduser('~'),'processed_data','ref',organism)
     if not os.path.isdir(org_dir):
         raise ValueError('Reference not created for organism. See 0_setup_organism')
         
