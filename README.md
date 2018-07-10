@@ -22,11 +22,12 @@ Alternatively, see Anand for access to a temporary prebuilt virtual machine with
     * `raw_files.csv` does not need absolute paths, as long as all the fastq files are in a common directory
     * Supports alignment to multiple genomes within a run (using the organism column)
     * Organism column must contain the same ID used in 0_setup_organism
+    * Each sample_id must end in _1, _2, etc. to designate biological/technical replicate 1, 2, etc., respectively.
     
 | sample_id | R1  | R2  | organism |
 |:----------:|:---:|:---:|:--------:|
-| wt_fe2_1	| WT-Fe2-1_S1_L001_R1_001.fastq.trunc.gz | WT-Fe2-1_S1_L001_R2_001.fastq.trunc.gz | MG1655 |
-|	wt_fe2_2	| WT-FE2-2_S2_L001_R1_001.fastq.trunc.gz | WT-FE2-2_S2_L001_R2_001.fastq.trunc.gz | MG1655 |
+| wt_fe2_1	| WT-Fe2-1_S1_L001_R1_001.fastq.gz | WT-Fe2-1_S1_L001_R2_001.fastq.gz | MG1655 |
+|	wt_fe2_2	| WT-FE2-2_S2_L001_R1_001.fastq.gz | WT-FE2-2_S2_L001_R2_001.fastq.gz | MG1655 |
 
 2. Count reads ([2_count_reads.ipynb](https://github.com/SBRG/RNAseq_workflow/blob/master/2_count_reads.ipynb))
     * This notebook requires the R kernel
