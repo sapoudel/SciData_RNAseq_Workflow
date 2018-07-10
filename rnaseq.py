@@ -143,21 +143,6 @@ def gb2gff(sequence,genbank,id_tag='locus_tag'):
 ## Align Reads ##
 #################
 
-def mount_bucket(bucket):
-    
-    data_dir = os.path.join(os.path.expanduser('~'),bucket)
-    
-    # Create bucket folder
-    if not os.path.isdir(data_dir):
-        subprocess.call(['mkdir',data_dir])
-    
-    # Mount bucket
-    if not os.path.ismount(data_dir):
-        subprocess.call(['gcsfuse','--file-mode','777',
-                         '--dir-mode','777',bucket,data_dir])
-    
-    return data_dir
-
 def gunzip(gz,out_dir):
     basename = os.path.split(gz)[1][:-3]
     result = os.path.join(out_dir,basename)

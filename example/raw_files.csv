@@ -1,9 +1,9 @@
 sample_id,R1,R2,organism
-wt_fe2_1,WT-Fe2-1_S1_L001_R1_001.fastq.gz,WT-Fe2-1_S1_L001_R2_001.fastq.gz,MG1655
-wt_fe2_2,WT-FE2-2_S2_L001_R1_001.fastq.gz,WT-FE2-2_S2_L001_R2_001.fastq.gz,MG1655
-wt_dpd_1,WTDPD1_S1_L001_R1_001.fastq.gz,WTDPD1_S1_L001_R2_001.fastq.gz,MG1655
-wt_dpd_2,WTDPD2_S1_L001_R1_001.fastq.gz,WTDPD2_S1_L001_R2_001.fastq.gz,MG1655
-delfur_fe2_1,del-fur-Fe2-1_S1_L001_R1_001.fastq.gz,del-fur-Fe2-1_S1_L001_R2_001.fastq.gz,MG1655
-delfur_fe2_2,del-fur-Fe2-2_S2_L001_R1_001.fastq.gz,del-fur-Fe2-2_S2_L001_R2_001.fastq.gz,MG1655
-delfur_dpd_1,delfurDPD1_S2_L001_R1_001.fastq.gz,delfurDPD1_S2_L001_R2_001.fastq.gz,MG1655
-delfur_dpd_2,delfurDPD2_S2_L001_R1_001.fastq.gz,delfurDPD2_S2_L001_R2_001.fastq.gz,MG1655
+wt_fe2_1,WT-Fe2-1_S1_L001_R1_001.fastq.trunc.gz,WT-Fe2-1_S1_L001_R2_001.fastq.trunc.gz,MG1655
+wt_fe2_2,WT-FE2-2_S2_L001_R1_001.fastq.trunc.gz,WT-FE2-2_S2_L001_R2_001.fastq.trunc.gz,MG1655
+wt_dpd_1,WTDPD1_S1_L001_R1_001.fastq.trunc.gz,WTDPD1_S1_L001_R2_001.fastq.trunc.gz,MG1655
+wt_dpd_2,WTDPD2_S1_L001_R1_001.fastq.trunc.gz,WTDPD2_S1_L001_R2_001.fastq.trunc.gz,MG1655
+delfur_fe2_1,del-fur-Fe2-1_S1_L001_R1_001.fastq.trunc.gz,del-fur-Fe2-1_S1_L001_R2_001.fastq.trunc.gz,MG1655
+delfur_fe2_2,del-fur-Fe2-2_S2_L001_R1_001.fastq.trunc.gz,del-fur-Fe2-2_S2_L001_R2_001.fastq.trunc.gz,MG1655
+delfur_dpd_1,delfurDPD1_S2_L001_R1_001.fastq.trunc.gz,delfurDPD1_S2_L001_R2_001.fastq.trunc.gz,MG1655
+delfur_dpd_2,delfurDPD2_S2_L001_R1_001.fastq.trunc.gz,delfurDPD2_S2_L001_R2_001.fastq.trunc.gz,MG1655

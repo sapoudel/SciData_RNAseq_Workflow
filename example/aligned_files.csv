@@ -1,0 +1,9 @@
+,sample_id,R1,R2,organism,BAM,alignment
+0,wt_fe2_1,WT-Fe2-1_S1_L001_R1_001.fastq.trunc.gz,WT-Fe2-1_S1_L001_R2_001.fastq.trunc.gz,MG1655,example/bam/wt_fe2_1.bam,93.43
+1,wt_fe2_2,WT-FE2-2_S2_L001_R1_001.fastq.trunc.gz,WT-FE2-2_S2_L001_R2_001.fastq.trunc.gz,MG1655,example/bam/wt_fe2_2.bam,92.38
+2,wt_dpd_1,WTDPD1_S1_L001_R1_001.fastq.trunc.gz,WTDPD1_S1_L001_R2_001.fastq.trunc.gz,MG1655,example/bam/wt_dpd_1.bam,98.11
+3,wt_dpd_2,WTDPD2_S1_L001_R1_001.fastq.trunc.gz,WTDPD2_S1_L001_R2_001.fastq.trunc.gz,MG1655,example/bam/wt_dpd_2.bam,98.31
+4,delfur_fe2_1,del-fur-Fe2-1_S1_L001_R1_001.fastq.trunc.gz,del-fur-Fe2-1_S1_L001_R2_001.fastq.trunc.gz,MG1655,example/bam/delfur_fe2_1.bam,92.82
+5,delfur_fe2_2,del-fur-Fe2-2_S2_L001_R1_001.fastq.trunc.gz,del-fur-Fe2-2_S2_L001_R2_001.fastq.trunc.gz,MG1655,example/bam/delfur_fe2_2.bam,93.3
+6,delfur_dpd_1,delfurDPD1_S2_L001_R1_001.fastq.trunc.gz,delfurDPD1_S2_L001_R2_001.fastq.trunc.gz,MG1655,example/bam/delfur_dpd_1.bam,98.08
+7,delfur_dpd_2,delfurDPD2_S2_L001_R1_001.fastq.trunc.gz,delfurDPD2_S2_L001_R2_001.fastq.trunc.gz,MG1655,example/bam/delfur_dpd_2.bam,98.41
