@@ -1,4 +1,4 @@
-import os,subprocess,gzip,shutil,re
+import os,subprocess,shutil,re
 
 ##########################
 ## Make Reference Files ##
@@ -16,7 +16,7 @@ def initialize_reference(org_id,fasta,gb,aligner):
         raise ValueError('File does not exist: %s'%full_gb)
     
     # Initialize reference directory
-    org_dir = os.path.join(os.path.expanduser('~/processed_data/ref/'),org_id)
+    org_dir = os.path.join('ref',org_id)
     if not os.path.isdir(org_dir):
         os.makedirs(org_dir)
         
@@ -230,7 +230,7 @@ def align_reads(name,R1,R2,organism,in_dir,out_dir,cores=8,
         raise ValueError('R1 and R2 files are identical')
 
     # Check that organism directory exists
-    org_dir = os.path.join(os.path.expanduser('~'),'processed_data','ref',organism)
+    org_dir = os.path.join('ref',organism)
     if not os.path.isdir(org_dir):
         raise ValueError('Reference not created for organism. See 0_setup_organism')
         
