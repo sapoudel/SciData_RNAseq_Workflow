@@ -23,6 +23,7 @@ Alternatively, see Anand for access to a temporary prebuilt virtual machine with
     * Supports alignment to multiple genomes within a run (using the organism column)
     * Organism column must contain the same ID used in 0_setup_organism
     * Each sample_id must end in _1, _2, etc. to designate biological/technical replicate 1, 2, etc., respectively.
+    * If reads are split between two files, separate files using a semicolon (;)
     
 | sample_id | R1  | R2  | organism |
 |:----------:|:---:|:---:|:--------:|
