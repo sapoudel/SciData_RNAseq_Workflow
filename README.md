@@ -1,5 +1,5 @@
 # RNAseq_workflow
-This pipeline will guide you through the analysis of RNAseq data, from FASTQ files to finding differentially expressed genes. Please read the [RNASeq Wiki](https://github.com/SBRG/SBRG_wiki/wiki/RNA-seq-Processing) before starting your analysis.
+This pipeline will guide you through the analysis of RNAseq data, from FASTQ files to finding differentially expressed genes. Please read the [RNASeq Wiki](https://github.com/SBRG/SBRG_wiki/wiki/RNA-seq-Processing) before starting your analysis. This repo contains example fastq files that take up about .5GB. The folder `RNAseq_workflow/example/fastq` can be removed to save space.
 
 ## Requirements:
 1. [FastQC](http://www.bioinformatics.babraham.ac.uk/projects/fastqc/)
