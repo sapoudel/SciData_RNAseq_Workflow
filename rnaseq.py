@@ -164,7 +164,7 @@ def get_alignment_score(out_dir,name,aligner):
         return float(result[match.start():match.end()-1])
 
 def align_reads(name,R1,R2,organism,in_dir,out_dir,cores=8,
-                insertsize=1000,force=False,verbose=False):
+                insertsize=1000,force=False,verbose=False,local=False):
     '''
     Align RNAseq FASTQ files using bowtie or bowtie2 to a reference genome.
     Returns the final BAM file location ('/<out_dir>/<name>.bam') and the
@@ -186,6 +186,8 @@ def align_reads(name,R1,R2,organism,in_dir,out_dir,cores=8,
         Maximum distance between paired ends
     cores: int (default 1)
         Number of cores
+    local: boolean (default True)
+        Downloads files before processing (if raw files are on server/cloud)
     force: boolean (default False)
         Re-runs alignment even if BAM file already exists
     verbose: boolean (default False)
@@ -198,6 +200,7 @@ def align_reads(name,R1,R2,organism,in_dir,out_dir,cores=8,
 
     ### Set-up and quality check ###    
     
+    # Make output directory if it doesn't already exist
     if not os.path.isdir(out_dir):
         if verbose:
             print('Creating output directory %s'%out_dir)
@@ -229,7 +232,13 @@ def align_reads(name,R1,R2,organism,in_dir,out_dir,cores=8,
         return os.path.join(out_dir,name+'.bam'),score
 
     ### Unzip fastq files ###
-    tmp_dir = os.path.join(out_dir,'tmp')
+    
+    # Create directory for temporary files
+    if local:
+        tmp_dir = 'tmp'
+    else:
+        tmp_dir = os.path.join(out_dir,'tmp')
+        
     if not os.path.isdir(tmp_dir):
         os.makedirs(tmp_dir)
     
@@ -237,16 +246,31 @@ def align_reads(name,R1,R2,organism,in_dir,out_dir,cores=8,
     final_r2 = []
     # In case the fastq files are split
     for fastq in r1_files:
+        # Move files for local computation
+        if local:
+            print 'Downloading file: %s'%fastq
+            new_fastq = os.path.join(tmp_dir,os.path.basename(fastq))
+            shutil.copy(fastq,new_fastq)
+            fastq = new_fastq
+        
+        # Unzip files for bowtie
         if fastq.endswith('.gz') and aligner=='bowtie':
             if verbose:
                 print 'Unzipping file: %s'%fastq
-            
             final_r1.append(gunzip(fastq,tmp_dir))
         else:
             final_r1.append(fastq)
 
     
     for fastq in r2_files:
+        # Move files for local computation
+        if local:
+            print 'Downloading file: %s'%fastq
+            new_fastq = os.path.join(tmp_dir,os.path.basename(fastq))
+            shutil.copy(fastq,new_fastq)
+            fastq = new_fastq
+        
+        # Unzip files for bowtie
         if fastq.endswith('.gz') and aligner=='bowtie':
             if verbose:
                 print 'Unzipping file: %s'%fastq
@@ -258,7 +282,7 @@ def align_reads(name,R1,R2,organism,in_dir,out_dir,cores=8,
 
     
     bowtie_out = os.path.join(tmp_dir,name+'.sam')
-    bowtie_err = os.path.join(out_dir,name+'_bowtie_output.txt')
+    bowtie_err = os.path.join(tmp_dir,name+'_bowtie_output.txt')
 
     if aligner == 'bowtie':
         cmd = [aligner,'-X',str(insertsize),'-n','2','-p',str(cores),'-3','3',
@@ -281,7 +305,7 @@ def align_reads(name,R1,R2,organism,in_dir,out_dir,cores=8,
     ### Post-process files ###
 
     unsorted_bam = os.path.join(tmp_dir,name+'.unsorted.bam')
-    sorted_bam = os.path.join(out_dir,name+'.bam')
+    sorted_bam = os.path.join(tmp_dir,name+'.bam')
 
     sam2bam = ['samtools','view','-b',bowtie_out,'-@',str(cores),'-o',unsorted_bam]
     samsort = ['samtools','sort',unsorted_bam,'-@',str(cores),'-o',sorted_bam]
@@ -291,6 +315,10 @@ def align_reads(name,R1,R2,organism,in_dir,out_dir,cores=8,
     if verbose:
         print 'Sorting BAM file: ' + ' '.join(samsort)
     subprocess.call(samsort)
+    
+    # Move final BAM and bowtie output files to output directory
+    shutil.move(sorted_bam,out_dir)
+    shutil.move(bowtie_err,out_dir)
 
     ### Clear all non-bam files ###
     if verbose:
