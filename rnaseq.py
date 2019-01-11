@@ -312,7 +312,7 @@ def align_reads(name, R1, R2, organism, in_dir, out_dir, cores=8,
 
 def get_bam_stats(out_dir, name):
     """
-    :param bamfile:
+    :param: direct and name of sample
     :return: mean phred quality, total reads, mapped reads
     """
     bamfile = os.path.join(out_dir, name + '.bam')
